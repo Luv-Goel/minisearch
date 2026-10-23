@@ -238,6 +238,25 @@ class Index:
             hits.sort(key=lambda h: (-h.score, h.doc_id))
             return hits[:top_k]
 
+    def count(self, query: str, fields: Optional[dict[str, float]] = None) -> int:
+        """Return the number of documents matching ``query``.
+
+        Cheaper than ``len(search(query))`` because it does not materialize
+        Hit objects, snippets, or highlights. Same matching semantics as
+        ``search`` (same query syntax, same field boosts).
+        """
+        boosts = self._norm_boosts(fields)
+        with self._lock:
+            if not self._docs or not query or not query.strip():
+                return 0
+            tree = parse_query(query)
+            if tree.is_empty():
+                return 0
+            doc_scores: dict[str, float] = {}
+            doc_terms: dict[str, set[str]] = {}
+            matched = self._eval_bool(tree, boosts, doc_scores, doc_terms)
+            return len(matched)
+
     @staticmethod
     def _norm_boosts(fields: Optional[dict[str, float]]) -> dict[str, float]:
         if not fields:

@@ -219,5 +219,47 @@ class TestConcurrentAdds(unittest.TestCase):
         self.assertEqual(len(idx.search("worker", top_k=50)), 40)
 
 
+class TestCount(unittest.TestCase):
+    def test_count_matches_search_length(self):
+        idx = make_index([
+            ("1", {"body": "python programming language"}),
+            ("2", {"body": "cooking pasta recipes"}),
+            ("3", {"body": "python cooking basics"}),
+        ])
+        self.assertEqual(idx.count("python"), len(idx.search("python")))
+        self.assertEqual(idx.count("zebra"), 0)
+        self.assertEqual(idx.count("python OR cooking"), 3)
+
+    def test_count_empty_query(self):
+        idx = make_index([("1", {"body": "hello world"})])
+        self.assertEqual(idx.count(""), 0)
+        self.assertEqual(idx.count("   "), 0)
+
+    def test_count_field_boost(self):
+        idx = make_index([
+            ("1", {"title": "python", "body": "java"}),
+            ("2", {"title": "java", "body": "python"}),
+        ])
+        self.assertEqual(idx.count("python", fields={"title": 2.0}), 1)
+        self.assertEqual(idx.count("python", fields={"body": 5.0}), 1)
+        self.assertEqual(idx.count("python"), 2)
+
+    def test_count_phrase(self):
+        idx = make_index([
+            ("1", {"body": "quick brown fox"}),
+            ("2", {"body": "brown quick fox"}),
+        ])
+        self.assertEqual(idx.count('"quick brown"'), 1)
+        self.assertEqual(idx.count("quick brown"), 2)
+
+    def test_count_expensive_hits_equal(self):
+        idx = make_index([
+            ("1", {"body": "alpha beta gamma delta epsilon"}),
+            ("2", {"body": "alpha beta"}),
+            ("3", {"body": "gamma delta epsilon"}),
+        ])
+        self.assertEqual(idx.count("alpha OR gamma"), len(idx.search("alpha OR gamma", top_k=50)))
+
+
 if __name__ == "__main__":
     unittest.main()
