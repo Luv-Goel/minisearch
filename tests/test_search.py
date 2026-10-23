@@ -261,5 +261,28 @@ class TestCount(unittest.TestCase):
         self.assertEqual(idx.count("alpha OR gamma"), len(idx.search("alpha OR gamma", top_k=50)))
 
 
+class TestDistinct(unittest.TestCase):
+    def test_distinct_unique_values(self):
+        idx = make_index([
+            ("1", {"status": "open", "priority": "high"}),
+            ("2", {"status": "closed", "priority": "low"}),
+            ("3", {"status": "open", "priority": "medium"}),
+        ])
+        self.assertEqual(idx.distinct("status"), ["closed", "open"])
+        self.assertEqual(idx.distinct("priority"), ["high", "low", "medium"])
+
+    def test_distinct_missing_field(self):
+        idx = make_index([("1", {"a": "x"})])
+        self.assertEqual(idx.distinct("nonexistent"), [])
+
+    def test_distinct_empty_index(self):
+        idx = make_index([])
+        self.assertEqual(idx.distinct("status"), [])
+
+    def test_distinct_case_insensitive_field_name(self):
+        idx = make_index([("1", {"Status": "open"})])
+        self.assertEqual(idx.distinct("STATUS"), ["open"])
+
+
 if __name__ == "__main__":
     unittest.main()

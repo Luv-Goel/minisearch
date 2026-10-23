@@ -257,6 +257,22 @@ class Index:
             matched = self._eval_bool(tree, boosts, doc_scores, doc_terms)
             return len(matched)
 
+    def distinct(self, field: str) -> list[Any]:
+        """Return the sorted unique values of ``field`` across all docs.
+
+        Values are coerced to str for comparison so mixed-type fields sort
+        deterministically. Empty/missing values are skipped.
+        """
+        field = field.lower()
+        seen: set[Any] = set()
+        with self._lock:
+            for doc in self._docs.values():
+                val = next((v for k, v in doc.items() if k.lower() == field), None)
+                if val is None:
+                    continue
+                seen.add(val)
+        return sorted(seen, key=lambda v: str(v).lower())
+
     @staticmethod
     def _norm_boosts(fields: Optional[dict[str, float]]) -> dict[str, float]:
         if not fields:
